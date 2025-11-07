@@ -3,7 +3,6 @@ import json
 import os
 from datetime import datetime
 import pandas as pd
-import plotly.express as px
 from utils.auth import AuthSystem
 from utils.ai_helpers import PropertyAIAnalyzer, get_free_apis
 
@@ -198,32 +197,40 @@ def show_main_application():
                 st.write(analysis)
                 
                 # Visualizations
-                st.subheader("📈 Market Comparison")
                 create_comparison_charts(comps, purchase_price)
 
 def create_comparison_charts(comps, purchase_price):
-    """Create comparison charts"""
-    df = pd.DataFrame(comps)
-    df['comp'] = [f'Comp {i+1}' for i in range(len(comps))]
+    """Create simple comparison tables without plotly"""
+    st.subheader("📊 Market Comparison")
     
-    # Price comparison
-    fig_price = px.bar(
-        x=['Your Property'] + df['comp'].tolist(),
-        y=[purchase_price] + df['price'].tolist(),
-        title="Price Comparison",
-        labels={'x': 'Properties', 'y': 'Price ($)'}
-    )
-    st.plotly_chart(fig_price, use_container_width=True)
+    # Create a simple table for prices
+    st.write("**Price Comparison:**")
+    price_data = {
+        'Property': ['Your Property'] + [f'Comp {i+1}' for i in range(len(comps))],
+        'Price': [f"${purchase_price:,}"] + [f"${comp['price']:,}" for comp in comps],
+        'Monthly Rent': ['N/A'] + [f"${comp.get('rent', 'N/A'):,}" for comp in comps]
+    }
     
-    # Rent comparison
-    if 'rent' in df.columns:
-        fig_rent = px.bar(
-            x=df['comp'],
-            y=df['rent'],
-            title="Rental Price Comparison",
-            labels={'x': 'Comparable Properties', 'y': 'Monthly Rent ($)'}
-        )
-        st.plotly_chart(fig_rent, use_container_width=True)
+    # Convert to DataFrame for better display
+    price_df = pd.DataFrame(price_data)
+    st.dataframe(price_df, use_container_width=True, hide_index=True)
+    
+    # Calculate and show basic metrics
+    st.write("**Market Insights:**")
+    avg_comp_price = sum(comp['price'] for comp in comps) / len(comps)
+    price_difference = purchase_price - avg_comp_price
+    price_percentage = (price_difference / avg_comp_price) * 100
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Average Comp Price", f"${avg_comp_price:,.0f}")
+    with col2:
+        st.metric("Price Difference", f"${price_difference:,.0f}", 
+                 f"{price_percentage:+.1f}%")
+    with col3:
+        if comps and any(comp.get('rent') for comp in comps):
+            avg_rent = sum(comp.get('rent', 0) for comp in comps) / len([comp for comp in comps if comp.get('rent')])
+            st.metric("Average Monthly Rent", f"${avg_rent:,.0f}")
 
 def show_upgrade_modal():
     """Show upgrade options"""
