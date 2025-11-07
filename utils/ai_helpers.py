@@ -28,7 +28,7 @@ class PropertyAIAnalyzer:
         
         try:
             response = self.openai_client.chat.completions.create(
-                model="gpt-3.5-turbo",  # Using cheaper model
+                model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "You are a expert real estate analyst. Provide detailed, data-driven analysis."},
                     {"role": "user", "content": prompt}
@@ -84,7 +84,7 @@ class PropertyAIAnalyzer:
             'flip_potential': 'Not specified'
         }
         
-        # Simple regex extraction (you can make this more sophisticated)
+        # Simple regex extraction
         rental_match = re.search(r'(\$\d{1,4}(?:,\d{3})*(?:-\$\d{1,4}(?:,\d{3})*)?\s*per month)', analysis_text)
         if rental_match:
             metrics['rental_value'] = rental_match.group(1)
@@ -103,11 +103,9 @@ class PropertyAIAnalyzer:
         
         return metrics
 
-# Free API key management
 def get_free_apis():
     """Instructions for getting free API keys"""
     return {
         "OpenAI": "Get $5 free credit at https://platform.openai.com",
-        "Google Gemini": "Free tier available at https://makersuite.google.com",
-        "Hugging Face": "Free inference API at https://huggingface.co"
+        "Google Gemini": "Free tier available at https://makersuite.google.com"
     }
