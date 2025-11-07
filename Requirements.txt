@@ -2,6 +2,5 @@ streamlit
 openai
 google-generativeai
 pandas
-plotly
 requests
 python-dotenv
