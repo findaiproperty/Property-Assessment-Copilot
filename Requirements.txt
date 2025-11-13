@@ -1,5 +1,6 @@
-streamlit
-google-generativeai==0.3.0
-pandas
-requests
-python-dotenv
+streamlit==1.28.0
+google-generativeai==0.3.2
+pandas==2.0.3
+requests==2.31.0
+python-dotenv==1.0.0
+protobuf==4.25.0
