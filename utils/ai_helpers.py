@@ -6,56 +6,82 @@ import re
 try:
     import google.generativeai as genai
     GOOGLE_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     GOOGLE_AVAILABLE = False
-    print("Google Generative AI package not available")
+    print(f"❌ Google Generative AI import failed: {e}")
 
 class PropertyAIAnalyzer:
     def __init__(self):
+        self.gemini_available = False
         self.setup_apis()
     
     def setup_apis(self):
         """Initialize Google Gemini API"""
+        print("🔧 Setting up Gemini API...")
+        
         # Get API key from Streamlit secrets
         try:
-            # Try to get from Streamlit secrets (production)
             import streamlit as st
             self.google_key = st.secrets.get("GOOGLE_API_KEY", "")
-            print("✅ Using API key from Streamlit secrets")
-        except:
-            # Fallback to environment variable (development)
+            print(f"🔑 Key from secrets: {'Found' if self.google_key else 'NOT FOUND'}")
+            if self.google_key:
+                print(f"🔑 Key length: {len(self.google_key)}")
+                print(f"🔑 Key starts with: {self.google_key[:10]}...")
+        except Exception as e:
+            print(f"❌ Failed to read secrets: {e}")
             self.google_key = os.getenv('GOOGLE_API_KEY', '')
-            print("ℹ️ Using API key from environment variable")
+            print(f"🔑 Key from env: {'Found' if self.google_key else 'NOT FOUND'}")
         
         # Google Gemini setup
-        if GOOGLE_AVAILABLE and self.google_key:
-            try:
-                genai.configure(api_key=self.google_key)
-                self.gemini_model = genai.GenerativeModel('gemini-pro')
-                self.gemini_available = True
-                print("✅ Google Gemini configured successfully")
-            except Exception as e:
-                print(f"❌ Google Gemini setup failed: {e}")
-                self.gemini_available = False
-        else:
+        if not GOOGLE_AVAILABLE:
+            print("❌ google-generativeai package not available")
             self.gemini_available = False
-            if not GOOGLE_AVAILABLE:
-                print("❌ Google Generative AI package not installed")
-            elif not self.google_key:
-                print("❌ Google API key not found in secrets or environment")
+            return
+            
+        if not self.google_key:
+            print("❌ No Google API key found")
+            self.gemini_available = False
+            return
+        
+        try:
+            print("🔄 Configuring Gemini...")
+            genai.configure(api_key=self.google_key)
+            self.gemini_model = genai.GenerativeModel('gemini-pro')
+            
+            # Test the configuration with a simple call
+            print("🧪 Testing API connection...")
+            response = self.gemini_model.generate_content("Say 'API connected' in one word.")
+            print(f"✅ API test response: {response.text}")
+            
+            self.gemini_available = True
+            print("🎉 Google Gemini configured successfully!")
+            
+        except Exception as e:
+            print(f"❌ Google Gemini setup failed: {e}")
+            self.gemini_available = False
     
     def analyze_with_gemini(self, property_data, comps_data):
         """Analyze property using Google Gemini"""
         if not self.gemini_available:
-            return "❌ Google Gemini not configured. Please check the API key configuration."
+            error_msg = "❌ Google Gemini not configured. "
+            if not GOOGLE_AVAILABLE:
+                error_msg += "Package not installed."
+            elif not hasattr(self, 'google_key') or not self.google_key:
+                error_msg += "API key not found in secrets."
+            else:
+                error_msg += "Configuration failed."
+            return error_msg
         
         prompt = self._create_analysis_prompt(property_data, comps_data)
         
         try:
+            print("🤖 Sending request to Gemini...")
             response = self.gemini_model.generate_content(prompt)
+            print("✅ Received response from Gemini")
             return response.text
         except Exception as e:
             error_msg = str(e)
+            print(f"❌ Gemini API error: {error_msg}")
             if "quota" in error_msg.lower():
                 return "❌ Google API quota exceeded. Free tier has daily limits. Try again tomorrow."
             elif "API key" in error_msg or "key" in error_msg.lower():
