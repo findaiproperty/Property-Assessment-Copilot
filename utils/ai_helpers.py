@@ -16,21 +16,12 @@ class PropertyAIAnalyzer:
         self.setup_apis()
     
     def setup_apis(self):
-        """Initialize Google Gemini API"""
-        print("🔧 Setting up Gemini API...")
+        """Initialize Google Gemini API with hardcoded key"""
+        print("🔧 Setting up Gemini API with hardcoded key...")
         
-        # Get API key from Streamlit secrets
-        try:
-            import streamlit as st
-            self.google_key = st.secrets.get("GOOGLE_API_KEY", "")
-            print(f"🔑 Key from secrets: {'Found' if self.google_key else 'NOT FOUND'}")
-            if self.google_key:
-                print(f"🔑 Key length: {len(self.google_key)}")
-                print(f"🔑 Key starts with: {self.google_key[:10]}...")
-        except Exception as e:
-            print(f"❌ Failed to read secrets: {e}")
-            self.google_key = os.getenv('GOOGLE_API_KEY', '')
-            print(f"🔑 Key from env: {'Found' if self.google_key else 'NOT FOUND'}")
+        # HARDCODED API KEY - Replace if needed
+        self.google_key = "AIzaSyBr0q85DBSpWLrHbijX14aR5wEdPtMj2mE"
+        print(f"🔑 Using hardcoded API key: {self.google_key[:10]}...")
         
         # Google Gemini setup
         if not GOOGLE_AVAILABLE:
@@ -63,33 +54,28 @@ class PropertyAIAnalyzer:
     def analyze_with_gemini(self, property_data, comps_data):
         """Analyze property using Google Gemini"""
         if not self.gemini_available:
-            error_msg = "❌ Google Gemini not configured. "
-            if not GOOGLE_AVAILABLE:
-                error_msg += "Package not installed."
-            elif not hasattr(self, 'google_key') or not self.google_key:
-                error_msg += "API key not found in secrets."
-            else:
-                error_msg += "Configuration failed."
-            return error_msg
+            return "❌ Google Gemini not available. Please check the configuration."
         
         prompt = self._create_analysis_prompt(property_data, comps_data)
         
         try:
-            print("🤖 Sending request to Gemini...")
+            print("🤖 Sending analysis request to Gemini...")
             response = self.gemini_model.generate_content(prompt)
-            print("✅ Received response from Gemini")
+            print("✅ Received analysis from Gemini")
             return response.text
         except Exception as e:
             error_msg = str(e)
             print(f"❌ Gemini API error: {error_msg}")
             if "quota" in error_msg.lower():
                 return "❌ Google API quota exceeded. Free tier has daily limits. Try again tomorrow."
-            elif "API key" in error_msg or "key" in error_msg.lower():
-                return "❌ Invalid Google API key. Please check your key configuration in Streamlit secrets."
+            elif "API key" in error_msg or "key" in error_msg.lower() or "invalid" in error_msg.lower():
+                return f"❌ Invalid Google API key. Error: {error_msg}"
             elif "safety" in error_msg.lower():
                 return "⚠️ Content safety filters triggered. Please try different property details."
+            elif "not supported" in error_msg.lower():
+                return "❌ API key not supported or region restricted."
             else:
-                return f"Google Gemini error: {error_msg}\n\nPlease try again."
+                return f"Google Gemini error: {error_msg}"
     
     def _create_analysis_prompt(self, property_data, comps_data):
         """Create analysis prompt for Gemini"""
@@ -157,5 +143,5 @@ Be data-driven and reference the comparable properties in your analysis. Keep it
 def get_free_apis():
     """Instructions for getting free API keys"""
     return {
-        "Google Gemini": "✅ API Key configured via Streamlit Secrets"
+        "Google Gemini": "✅ API Key hardcoded in application"
     }
