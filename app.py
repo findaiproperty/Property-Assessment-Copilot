@@ -34,6 +34,8 @@ def main():
         st.session_state.username = None
     if 'just_registered' not in st.session_state:
         st.session_state.just_registered = False
+    if 'show_debug' not in st.session_state:
+        st.session_state.show_debug = False
     
     # Sidebar for authentication
     st.sidebar.title("🔐 Authentication")
@@ -101,15 +103,16 @@ def show_main_application():
     st.sidebar.write(f"**Plan**: {user_plan.upper()}")
     if user_plan == 'free':
         st.sidebar.write(f"**Remaining Analyses**: {remaining_uses}/5")
-        if st.sidebar.button("🚀 Upgrade to Premium"):
-            show_upgrade_modal()
+    
+    # Debug toggle
+    st.sidebar.markdown("---")
+    st.session_state.show_debug = st.sidebar.checkbox("Show Debug Info", value=False)
     
     # Check if Gemini is configured
     if ai_analyzer.gemini_available:
         st.sidebar.success("✅ AI Service Ready")
     else:
         st.sidebar.error("❌ AI Service Unavailable")
-        st.sidebar.info("Please check API key configuration in Streamlit secrets")
     
     if st.sidebar.button("Logout"):
         st.session_state.authenticated = False
@@ -121,6 +124,26 @@ def show_main_application():
     st.title("🏠 Property AI Analyzer")
     st.write("Get instant AI-powered analysis of property investment opportunities using Google Gemini")
     
+    # Debug information
+    if st.session_state.show_debug:
+        st.subheader("🔧 Debug Information")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.write("**API Status:**")
+            st.write(f"- Gemini Available: {ai_analyzer.gemini_available}")
+            st.write(f"- Package Installed: {hasattr(ai_analyzer, 'GOOGLE_AVAILABLE') and ai_analyzer.GOOGLE_AVAILABLE}")
+            st.write(f"- Has API Key: {hasattr(ai_analyzer, 'google_key') and bool(ai_analyzer.google_key)}")
+            if hasattr(ai_analyzer, 'google_key') and ai_analyzer.google_key:
+                st.write(f"- Key Length: {len(ai_analyzer.google_key)}")
+                st.write(f"- Key Preview: {ai_analyzer.google_key[:10]}...")
+        
+        with col2:
+            st.write("**User Info:**")
+            st.write(f"- Username: {st.session_state.username}")
+            st.write(f"- Plan: {user_plan}")
+            st.write(f"- Remaining Uses: {remaining_uses}")
+        st.markdown("---")
+    
     # Check usage limits
     if not auth_system.check_usage_limit(st.session_state.username):
         st.error("""
@@ -128,7 +151,6 @@ def show_main_application():
         
         You've used all your free analyses for this month. Please upgrade to premium for unlimited access.
         """)
-        show_upgrade_modal()
         return
     
     # Check if Gemini is configured
@@ -136,7 +158,14 @@ def show_main_application():
         st.error("""
         🔧 **Service Configuration Required**
         
-        The AI service is not properly configured. Please contact the administrator.
+        The AI service is not properly configured. 
+        
+        **Possible issues:**
+        - Google Gemini API key missing from Streamlit secrets
+        - API key is invalid or expired
+        - google-generativeai package not installed
+        
+        Please check the Streamlit secrets configuration and ensure the API key is valid.
         """)
         return
     
@@ -253,24 +282,6 @@ def create_comparison_charts(comps, purchase_price):
                 if valid_rents:
                     avg_rent = sum(valid_rents) / len(valid_rents)
                     st.metric("Avg Monthly Rent", f"${avg_rent:,.0f}")
-
-def show_upgrade_modal():
-    """Show upgrade options"""
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("🚀 Upgrade to Premium")
-    st.sidebar.write("**Unlock unlimited property analyses:**")
-    st.sidebar.write("✅ Unlimited AI analyses")
-    st.sidebar.write("✅ Advanced analytics")
-    st.sidebar.write("✅ Historical data")
-    st.sidebar.write("✅ Priority support")
-    
-    if st.sidebar.button("Upgrade Now - $29/month"):
-        # In a real app, this would integrate with Stripe/PayPal
-        if auth_system.upgrade_user(st.session_state.username, 'premium'):
-            st.sidebar.success("Upgraded to Premium!")
-            st.rerun()
-        else:
-            st.sidebar.error("Upgrade failed")
 
 if __name__ == "__main__":
     main()
