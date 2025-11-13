@@ -1,14 +1,20 @@
 import os
 import json
 import re
+import sys
 
-# Import Google Gemini with error handling  
+# Check if google-generativeai is installed
 try:
     import google.generativeai as genai
     GOOGLE_AVAILABLE = True
+    print("✅ google-generativeai package successfully imported")
 except ImportError as e:
     GOOGLE_AVAILABLE = False
-    print(f"❌ Google Generative AI import failed: {e}")
+    print(f"❌ google-generativeai import failed: {e}")
+    print("📦 Available packages:")
+    for package in sorted(sys.modules.keys()):
+        if 'google' in package or 'genai' in package:
+            print(f"   - {package}")
 
 class PropertyAIAnalyzer:
     def __init__(self):
@@ -17,94 +23,89 @@ class PropertyAIAnalyzer:
     
     def setup_apis(self):
         """Initialize Google Gemini API with hardcoded key"""
-        print("🔧 Setting up Gemini API with hardcoded key...")
+        print("🔧 Setting up Gemini API...")
+        print(f"📦 Google Generative AI available: {GOOGLE_AVAILABLE}")
         
-        # HARDCODED API KEY - Replace if needed
-        self.google_key = "AIzaSyBr0q85DBSpWLrHbijX14aR5wEdPtMj2mE"
-        print(f"🔑 Using hardcoded API key: {self.google_key[:10]}...")
+        # HARDCODED API KEY
+        self.google_key = "AIzaSyBFcWY9PUlf4T7cudtkPpLD7lhwM5lNIEk"
+        print(f"🔑 API key configured: {bool(self.google_key)}")
+        print(f"🔑 Key preview: {self.google_key[:10]}...")
         
-        # Google Gemini setup
         if not GOOGLE_AVAILABLE:
-            print("❌ google-generativeai package not available")
+            print("❌ Cannot setup Gemini - package not available")
             self.gemini_available = False
             return
             
         if not self.google_key:
-            print("❌ No Google API key found")
+            print("❌ Cannot setup Gemini - no API key")
             self.gemini_available = False
             return
         
         try:
-            print("🔄 Configuring Gemini...")
+            print("🔄 Configuring Gemini API...")
             genai.configure(api_key=self.google_key)
             self.gemini_model = genai.GenerativeModel('gemini-pro')
+            print("✅ Gemini model created")
             
-            # Test the configuration with a simple call
+            # Test the configuration
             print("🧪 Testing API connection...")
-            response = self.gemini_model.generate_content("Say 'API connected' in one word.")
-            print(f"✅ API test response: {response.text}")
+            response = self.gemini_model.generate_content("Say 'Connected'")
+            print(f"✅ API test successful: {response.text}")
             
             self.gemini_available = True
-            print("🎉 Google Gemini configured successfully!")
+            print("🎉 Google Gemini fully configured and ready!")
             
         except Exception as e:
-            print(f"❌ Google Gemini setup failed: {e}")
+            print(f"❌ Gemini setup failed: {str(e)}")
             self.gemini_available = False
     
     def analyze_with_gemini(self, property_data, comps_data):
         """Analyze property using Google Gemini"""
         if not self.gemini_available:
-            return "❌ Google Gemini not available. Please check the configuration."
+            return "❌ Google Gemini is not available. Please check the server logs for configuration issues."
         
         prompt = self._create_analysis_prompt(property_data, comps_data)
         
         try:
             print("🤖 Sending analysis request to Gemini...")
             response = self.gemini_model.generate_content(prompt)
-            print("✅ Received analysis from Gemini")
+            print("✅ Analysis received successfully")
             return response.text
         except Exception as e:
             error_msg = str(e)
             print(f"❌ Gemini API error: {error_msg}")
             if "quota" in error_msg.lower():
-                return "❌ Google API quota exceeded. Free tier has daily limits. Try again tomorrow."
-            elif "API key" in error_msg or "key" in error_msg.lower() or "invalid" in error_msg.lower():
-                return f"❌ Invalid Google API key. Error: {error_msg}"
+                return "❌ API quota exceeded. Please try again later."
+            elif "API key" in error_msg or "key" in error_msg.lower():
+                return f"❌ API key issue: {error_msg}"
             elif "safety" in error_msg.lower():
-                return "⚠️ Content safety filters triggered. Please try different property details."
-            elif "not supported" in error_msg.lower():
-                return "❌ API key not supported or region restricted."
+                return "⚠️ Content blocked by safety filters. Please modify your property details."
             else:
-                return f"Google Gemini error: {error_msg}"
+                return f"❌ Gemini API error: {error_msg}"
     
     def _create_analysis_prompt(self, property_data, comps_data):
         """Create analysis prompt for Gemini"""
         return f"""
-You are an expert real estate investment analyst. Analyze this property for investment potential.
+As a real estate investment expert, analyze this property:
 
-PROPERTY DETAILS:
-- Address: {property_data.get('address', 'Not specified')}
-- Type: {property_data.get('property_type', 'Not specified')}
-- Bedrooms: {property_data.get('bedrooms', 'N/A')}
-- Bathrooms: {property_data.get('bathrooms', 'N/A')}
-- Square Feet: {property_data.get('square_feet', 'N/A')}
-- Year Built: {property_data.get('year_built', 'N/A')}
-- Condition: {property_data.get('condition', 'N/A')}
-- Purchase Price: ${property_data.get('purchase_price', 0):,}
+PROPERTY:
+- {property_data.get('bedrooms', 0)} bed, {property_data.get('bathrooms', 0)} bath
+- {property_data.get('square_feet', 0)} sqft, {property_data.get('condition', 'Unknown')} condition
+- Built in {property_data.get('year_built', 'Unknown')}
+- Purchase price: ${property_data.get('purchase_price', 0):,}
 
-COMPARABLE PROPERTIES ({len(comps_data.get('comparables', []))} properties):
+COMPARABLE PROPERTIES:
 {json.dumps(comps_data.get('comparables', []), indent=2)}
 
-Please provide a comprehensive but concise analysis with these specific sections:
+Provide analysis covering:
+1. Estimated monthly rental value range
+2. Gross rental yield percentage 
+3. Market demand level (High/Medium/Low)
+4. Top 3 value-add improvements
+5. Flip potential assessment
+6. Investment recommendation
 
-1. **Rental Value Estimate**: Provide a monthly rental range based on comparables
-2. **Gross Rental Yield**: Calculate (Annual Rent / Purchase Price) as percentage
-3. **Demand Assessment**: Rate as High/Medium/Low based on market data
-4. **Improvement Suggestions**: 3-5 cost-effective upgrades to increase value
-5. **Flip Potential**: Assess as Strong/Moderate/Poor with reasoning
-6. **Investment Recommendation**: Overall verdict and key considerations
-
-Be data-driven and reference the comparable properties in your analysis. Keep it practical for real estate investors.
+Be concise and data-driven.
 """
     
     def extract_metrics(self, analysis_text):
@@ -139,9 +140,3 @@ Be data-driven and reference the comparable properties in your analysis. Keep it
                 break
         
         return metrics
-
-def get_free_apis():
-    """Instructions for getting free API keys"""
-    return {
-        "Google Gemini": "✅ API Key hardcoded in application"
-    }
