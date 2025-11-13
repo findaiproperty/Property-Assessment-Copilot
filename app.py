@@ -15,17 +15,28 @@ st.set_page_config(
 )
 
 # Initialize systems
-auth_system = AuthSystem()
-ai_analyzer = PropertyAIAnalyzer()
+@st.cache_resource
+def get_auth_system():
+    return AuthSystem()
+
+@st.cache_resource  
+def get_ai_analyzer():
+    return PropertyAIAnalyzer()
+
+auth_system = get_auth_system()
+ai_analyzer = get_ai_analyzer()
 
 def main():
-    # Sidebar for authentication
-    st.sidebar.title("🔐 Authentication")
-    
+    # Initialize session state
     if 'authenticated' not in st.session_state:
         st.session_state.authenticated = False
     if 'username' not in st.session_state:
         st.session_state.username = None
+    if 'just_registered' not in st.session_state:
+        st.session_state.just_registered = False
+    
+    # Sidebar for authentication
+    st.sidebar.title("🔐 Authentication")
     
     if not st.session_state.authenticated:
         show_auth_interface()
@@ -41,14 +52,19 @@ def show_auth_interface():
         login_username = st.text_input("Username", key="login_user")
         login_password = st.text_input("Password", type="password", key="login_pass")
         
-        if st.button("Login"):
-            success, message = auth_system.verify_user(login_username, login_password)
-            if success:
-                st.session_state.authenticated = True
-                st.session_state.username = login_username
-                st.rerun()
+        if st.button("Login", key="login_btn"):
+            if login_username and login_password:
+                with st.spinner("Logging in..."):
+                    success, message = auth_system.verify_user(login_username, login_password)
+                    if success:
+                        st.session_state.authenticated = True
+                        st.session_state.username = login_username
+                        st.session_state.just_registered = False
+                        st.rerun()
+                    else:
+                        st.error(f"Login failed: {message}")
             else:
-                st.error(message)
+                st.warning("Please enter both username and password")
     
     with tab2:
         st.subheader("Create Account")
@@ -57,15 +73,22 @@ def show_auth_interface():
         reg_password = st.text_input("Password", type="password", key="reg_pass")
         reg_confirm = st.text_input("Confirm Password", type="password", key="reg_confirm")
         
-        if st.button("Register"):
-            if reg_password != reg_confirm:
-                st.error("Passwords don't match")
-            else:
-                success, message = auth_system.create_user(reg_username, reg_password, reg_email)
-                if success:
-                    st.success("Account created! Please login.")
+        if st.button("Register", key="register_btn"):
+            if reg_username and reg_email and reg_password and reg_confirm:
+                if reg_password != reg_confirm:
+                    st.error("Passwords don't match")
                 else:
-                    st.error(message)
+                    with st.spinner("Creating account..."):
+                        success, message = auth_system.create_user(reg_username, reg_password, reg_email)
+                        if success:
+                            st.success("✅ Account created successfully! Please login with your new account.")
+                            st.session_state.just_registered = True
+                            # Clear the form
+                            st.rerun()
+                        else:
+                            st.error(f"Registration failed: {message}")
+            else:
+                st.warning("Please fill in all fields")
 
 def show_main_application():
     """Show the main application after login"""
@@ -91,6 +114,7 @@ def show_main_application():
     if st.sidebar.button("Logout"):
         st.session_state.authenticated = False
         st.session_state.username = None
+        st.session_state.just_registered = False
         st.rerun()
     
     # Main application
@@ -242,9 +266,11 @@ def show_upgrade_modal():
     
     if st.sidebar.button("Upgrade Now - $29/month"):
         # In a real app, this would integrate with Stripe/PayPal
-        auth_system.upgrade_user(st.session_state.username, 'premium')
-        st.sidebar.success("Upgraded to Premium!")
-        st.rerun()
+        if auth_system.upgrade_user(st.session_state.username, 'premium'):
+            st.sidebar.success("Upgraded to Premium!")
+            st.rerun()
+        else:
+            st.sidebar.error("Upgrade failed")
 
 if __name__ == "__main__":
     main()
