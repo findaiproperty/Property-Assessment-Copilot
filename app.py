@@ -32,10 +32,6 @@ def main():
         st.session_state.authenticated = False
     if 'username' not in st.session_state:
         st.session_state.username = None
-    if 'just_registered' not in st.session_state:
-        st.session_state.just_registered = False
-    if 'show_debug' not in st.session_state:
-        st.session_state.show_debug = False
     
     # Sidebar for authentication
     st.sidebar.title("🔐 Authentication")
@@ -61,7 +57,6 @@ def show_auth_interface():
                     if success:
                         st.session_state.authenticated = True
                         st.session_state.username = login_username
-                        st.session_state.just_registered = False
                         st.rerun()
                     else:
                         st.error(f"Login failed: {message}")
@@ -84,8 +79,6 @@ def show_auth_interface():
                         success, message = auth_system.create_user(reg_username, reg_password, reg_email)
                         if success:
                             st.success("✅ Account created successfully! Please login with your new account.")
-                            st.session_state.just_registered = True
-                            # Clear the form
                             st.rerun()
                         else:
                             st.error(f"Registration failed: {message}")
@@ -96,7 +89,7 @@ def show_main_application():
     """Show the main application after login"""
     st.sidebar.success(f"Welcome, {st.session_state.username}!")
     
-    # User info and upgrade
+    # User info
     user_plan = auth_system.get_user_plan(st.session_state.username)
     remaining_uses = auth_system.users[st.session_state.username]['max_uses'] - auth_system.users[st.session_state.username]['usage_count']
     
@@ -104,69 +97,47 @@ def show_main_application():
     if user_plan == 'free':
         st.sidebar.write(f"**Remaining Analyses**: {remaining_uses}/5")
     
-    # Debug toggle
-    st.sidebar.markdown("---")
-    st.session_state.show_debug = st.sidebar.checkbox("Show Debug Info", value=False)
-    
-    # Check if Gemini is configured
+    # AI Service Status
     if ai_analyzer.gemini_available:
         st.sidebar.success("✅ AI Service Ready")
     else:
         st.sidebar.error("❌ AI Service Unavailable")
+        st.sidebar.write("Please check the deployment logs for errors")
     
     if st.sidebar.button("Logout"):
         st.session_state.authenticated = False
         st.session_state.username = None
-        st.session_state.just_registered = False
         st.rerun()
     
     # Main application
     st.title("🏠 Property AI Analyzer")
     st.write("Get instant AI-powered analysis of property investment opportunities using Google Gemini")
     
-    # Debug information
-    if st.session_state.show_debug:
-        st.subheader("🔧 Debug Information")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.write("**API Status:**")
-            st.write(f"- Gemini Available: {ai_analyzer.gemini_available}")
-            st.write(f"- Package Installed: {hasattr(ai_analyzer, 'GOOGLE_AVAILABLE') and ai_analyzer.GOOGLE_AVAILABLE}")
-            st.write(f"- Has API Key: {hasattr(ai_analyzer, 'google_key') and bool(ai_analyzer.google_key)}")
-            if hasattr(ai_analyzer, 'google_key') and ai_analyzer.google_key:
-                st.write(f"- Key Length: {len(ai_analyzer.google_key)}")
-                st.write(f"- Key Preview: {ai_analyzer.google_key[:10]}...")
-        
-        with col2:
-            st.write("**User Info:**")
-            st.write(f"- Username: {st.session_state.username}")
-            st.write(f"- Plan: {user_plan}")
-            st.write(f"- Remaining Uses: {remaining_uses}")
-        st.markdown("---")
-    
     # Check usage limits
     if not auth_system.check_usage_limit(st.session_state.username):
         st.error("""
         🚫 **Usage Limit Reached**
         
-        You've used all your free analyses for this month. Please upgrade to premium for unlimited access.
+        You've used all your free analyses for this month. 
         """)
         return
     
     # Check if Gemini is configured
     if not ai_analyzer.gemini_available:
         st.error("""
-        🔧 **Service Configuration Required**
+        🔧 **AI Service Configuration Issue**
         
-        The AI service is not properly configured. 
-        
-        **Possible issues:**
-        - Google Gemini API key missing from Streamlit secrets
-        - API key is invalid or expired
-        - google-generativeai package not installed
-        
-        Please check the Streamlit secrets configuration and ensure the API key is valid.
+        The AI service is currently unavailable. This is being investigated.
         """)
+        # Show debug info
+        with st.expander("Technical Details"):
+            st.write("**API Status:**")
+            st.write(f"- Gemini Available: {ai_analyzer.gemini_available}")
+            st.write(f"- Package Installed: {hasattr(ai_analyzer, 'GOOGLE_AVAILABLE') and ai_analyzer.GOOGLE_AVAILABLE}")
+            if hasattr(ai_analyzer, 'google_key'):
+                st.write(f"- API Key Configured: {bool(ai_analyzer.google_key)}")
+                if ai_analyzer.google_key:
+                    st.write(f"- Key Preview: {ai_analyzer.google_key[:10]}...")
         return
     
     # Property input form
