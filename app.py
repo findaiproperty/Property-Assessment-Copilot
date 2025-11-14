@@ -3,8 +3,12 @@ import json
 import os
 from datetime import datetime
 import pandas as pd
-from utils.auth import AuthSystem
-from utils.ai_helpers import PropertyAIAnalyzer
+fimport sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from auth import AuthSystem
+from ai_helpers import PropertyAIAnalyzer
 
 # Page configuration
 st.set_page_config(
