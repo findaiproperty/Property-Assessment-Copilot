@@ -6,7 +6,8 @@ import hashlib
 
 class AuthSystem:
     def __init__(self, data_file='data/user_data.json'):
-        self.data_file = data_file
+        # Use absolute path for Streamlit Cloud
+        self.data_file = os.path.join(os.path.dirname(__file__), '..', data_file)
         self.load_user_data()
     
     def load_user_data(self):
@@ -23,7 +24,7 @@ class AuthSystem:
                 # Create initial file
                 self.save_user_data()
         except Exception as e:
-            print(f"Error loading user data: {e}")
+            st.error(f"Error loading user data: {e}")
             self.users = {}
     
     def save_user_data(self):
@@ -33,7 +34,7 @@ class AuthSystem:
                 json.dump(self.users, f, indent=2)
             return True
         except Exception as e:
-            print(f"Error saving user data: {e}")
+            st.error(f"Error saving user data: {e}")
             return False
     
     def hash_password(self, password):
