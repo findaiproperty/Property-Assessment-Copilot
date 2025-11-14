@@ -2,8 +2,8 @@ import streamlit as st
 import json
 import os
 from datetime import datetime
-import pandas as pd
-fimport sys
+import pandas as pdf
+import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
