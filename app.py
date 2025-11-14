@@ -3,12 +3,10 @@ import json
 import os
 from datetime import datetime
 import pandas as pd
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from auth import AuthSystem
-from ai_helpers import PropertyAIAnalyzer
+# Import from utils package
+from utils.auth import AuthSystem
+from utils.ai_helpers import PropertyAIAnalyzer
 
 # Page configuration
 st.set_page_config(
@@ -95,11 +93,12 @@ def show_main_application():
     
     # User info
     user_plan = auth_system.get_user_plan(st.session_state.username)
-    remaining_uses = auth_system.users[st.session_state.username]['max_uses'] - auth_system.users[st.session_state.username]['usage_count']
+    if st.session_state.username in auth_system.users:
+        remaining_uses = auth_system.users[st.session_state.username]['max_uses'] - auth_system.users[st.session_state.username]['usage_count']
     
-    st.sidebar.write(f"**Plan**: {user_plan.upper()}")
-    if user_plan == 'free':
-        st.sidebar.write(f"**Remaining Analyses**: {remaining_uses}/5")
+        st.sidebar.write(f"**Plan**: {user_plan.upper()}")
+        if user_plan == 'free':
+            st.sidebar.write(f"**Remaining Analyses**: {remaining_uses}/5")
     
     # AI Service Status
     if ai_analyzer.gemini_available:
@@ -116,6 +115,11 @@ def show_main_application():
     # Main application
     st.title("🏠 Property AI Analyzer")
     st.write("Get instant AI-powered analysis of property investment opportunities using Google Gemini")
+    
+    # Check if user exists in session
+    if st.session_state.username not in auth_system.users:
+        st.error("User session error. Please log in again.")
+        return
     
     # Check usage limits
     if not auth_system.check_usage_limit(st.session_state.username):
@@ -137,7 +141,8 @@ def show_main_application():
         with st.expander("Technical Details"):
             st.write("**API Status:**")
             st.write(f"- Gemini Available: {ai_analyzer.gemini_available}")
-            st.write(f"- Package Installed: {hasattr(ai_analyzer, 'GOOGLE_AVAILABLE') and ai_analyzer.GOOGLE_AVAILABLE}")
+            if hasattr(ai_analyzer, 'GOOGLE_AVAILABLE'):
+                st.write(f"- Package Installed: {ai_analyzer.GOOGLE_AVAILABLE}")
             if hasattr(ai_analyzer, 'google_key'):
                 st.write(f"- API Key Configured: {bool(ai_analyzer.google_key)}")
                 if ai_analyzer.google_key:
