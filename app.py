@@ -28,6 +28,58 @@ def get_ai_analyzer():
 auth_system = get_auth_system()
 ai_analyzer = get_ai_analyzer()
 
+def run_ai_diagnostics():
+    """Run AI diagnostics and show results"""
+    st.info("Running AI Diagnostics...")
+    
+    # Test 1: Check Python environment
+    with st.expander("Python Environment"):
+        import sys
+        st.write(f"Python version: {sys.version}")
+        st.write(f"Current directory: {os.getcwd()}")
+    
+    # Test 2: Check Google Generative AI package
+    with st.expander("Package Installation"):
+        try:
+            import google.generativeai as genai
+            st.success("✅ google.generativeai imported successfully")
+            
+            # Show available attributes
+            attrs = [attr for attr in dir(genai) if not attr.startswith('_')]
+            st.write(f"Available genai attributes: {len(attrs)}")
+            
+        except ImportError as e:
+            st.error(f"❌ Failed to import google.generativeai: {e}")
+    
+    # Test 3: Test API Key
+    with st.expander("API Key Test"):
+        API_KEY = "AIzaSyBFcWY9PUlf4T7cudtkPpLD7lhwM5lNIEk"
+        st.write(f"API Key: {API_KEY[:10]}...")
+        
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=API_KEY)
+            st.success("✅ API key configured")
+            
+            # Test model access
+            try:
+                model = genai.GenerativeModel('gemini-pro')
+                response = model.generate_content("Say 'TEST' in one word.")
+                st.success(f"✅ API test successful: {response.text}")
+            except Exception as e:
+                st.error(f"❌ Model test failed: {e}")
+                
+        except Exception as e:
+            st.error(f"❌ API configuration failed: {e}")
+    
+    # Test 4: Check AI Analyzer Status
+    with st.expander("AI Analyzer Status"):
+        st.write(f"Gemini Available: {ai_analyzer.gemini_available}")
+        if hasattr(ai_analyzer, 'GOOGLE_AVAILABLE'):
+            st.write(f"Google Package Available: {ai_analyzer.GOOGLE_AVAILABLE}")
+        if hasattr(ai_analyzer, 'gemini_model'):
+            st.write(f"Gemini Model: {ai_analyzer.gemini_model is not None}")
+
 def main():
     # Initialize session state
     if 'authenticated' not in st.session_state:
@@ -90,6 +142,11 @@ def show_auth_interface():
 def show_main_application():
     """Show the main application after login"""
     st.sidebar.success(f"Welcome, {st.session_state.username}!")
+    
+    # ADD THIS DEBUG SECTION
+    with st.sidebar.expander("🔧 Debug AI"):
+        if st.button("Run AI Diagnostics"):
+            run_ai_diagnostics()
     
     # User info
     user_plan = auth_system.get_user_plan(st.session_state.username)
@@ -265,65 +322,3 @@ def create_comparison_charts(comps, purchase_price):
 
 if __name__ == "__main__":
     main()
-def show_main_application():
-    """Show the main application after login"""
-    st.sidebar.success(f"Welcome, {st.session_state.username}!")
-    
-    # ADD THIS DEBUG SECTION
-    with st.sidebar.expander("🔧 Debug AI"):
-        if st.button("Run AI Diagnostics"):
-            run_ai_diagnostics()
-    
-    # ... rest of your existing code ...
-
-def run_ai_diagnostics():
-    """Run AI diagnostics and show results"""
-    st.info("Running AI Diagnostics...")
-    
-    # Test 1: Check Python environment
-    with st.expander("Python Environment"):
-        import sys
-        st.write(f"Python version: {sys.version}")
-        st.write(f"Current directory: {os.getcwd()}")
-    
-    # Test 2: Check Google Generative AI package
-    with st.expander("Package Installation"):
-        try:
-            import google.generativeai as genai
-            st.success("✅ google.generativeai imported successfully")
-            
-            # Show available attributes
-            attrs = [attr for attr in dir(genai) if not attr.startswith('_')]
-            st.write(f"Available genai attributes: {len(attrs)}")
-            
-        except ImportError as e:
-            st.error(f"❌ Failed to import google.generativeai: {e}")
-    
-    # Test 3: Test API Key
-    with st.expander("API Key Test"):
-        API_KEY = "AIzaSyBFcWY9PUlf4T7cudtkPpLD7lhwM5lNIEk"
-        st.write(f"API Key: {API_KEY[:10]}...")
-        
-        try:
-            import google.generativeai as genai
-            genai.configure(api_key=API_KEY)
-            st.success("✅ API key configured")
-            
-            # Test model access
-            try:
-                model = genai.GenerativeModel('gemini-pro')
-                response = model.generate_content("Say 'TEST' in one word.")
-                st.success(f"✅ API test successful: {response.text}")
-            except Exception as e:
-                st.error(f"❌ Model test failed: {e}")
-                
-        except Exception as e:
-            st.error(f"❌ API configuration failed: {e}")
-    
-    # Test 4: Check AI Analyzer Status
-    with st.expander("AI Analyzer Status"):
-        st.write(f"Gemini Available: {ai_analyzer.gemini_available}")
-        if hasattr(ai_analyzer, 'GOOGLE_AVAILABLE'):
-            st.write(f"Google Package Available: {ai_analyzer.GOOGLE_AVAILABLE}")
-        if hasattr(ai_analyzer, 'gemini_model'):
-            st.write(f"Gemini Model: {ai_analyzer.gemini_model is not None}")
